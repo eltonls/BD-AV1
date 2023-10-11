@@ -1,6 +1,45 @@
-# Recuperação De Falhas
-
 A gestão de falhas em um sistema de banco de dados SQL Server é essencial para garantir a integridade e a disponibilidade dos dados. Quando ocorre uma falha, o banco de dados pode se tornar inconsistente e inutilizável. A recuperação de falhas é um procedimento fundamental que visa restaurar o banco de dados ao seu estado consistente e funcional.
+## Backup
+A criação de backups é a parte que vem antes da recuperação, sendo necessário na maior parte das recuperações. É recomendável que seja feito um backup completo num intervalo definido de tempo e que ao longo do tempo sejam feitos backups diferenciais. Essa prática faz com que se mantenha o armazenamento em disco muito menor para backups e diminui o tempo onde o sistema fica passível a perda de dados.  Segue um exemplo de um backup completo feito com TSQL:
+```sql
+--------------------------------------------------------------------------------------
+-- A Criação de Um Dispositivo de Backup
+--------------------------------------------------------------------------------------
+DECLARE @Current_Date DATETIME;
+DECLARE @pname varchar(300);
+SET @Current_Date = SYSDATETIME();
+set @pname = (select 'C:\WEEKLY_EXPORTS\TEST_DB_BACKUP' + replace(CONVERT(varchar,@Current_Date, 20), ':', '_') + '.bak' );
+EXEC sp_addumpdevice @devtype = 'disk',
+@logicalname = 'WEEKLY_BACKUP',
+@physicalname = @pname;
+GO
+
+USE [master];
+GO
+BACKUP DATABASE [SQLTestDB]
+TO @pname
+WITH NOFORMAT, NOINIT,
+NAME = N'SQLTestDB-Full Database Backup', SKIP, NOREWIND, NOUNLOAD, STATS = 10;
+GO
+```
+Também é possível criar um código para backups diferenciais, segue exemplo:
+```sql
+-- Adicionando novos dados
+
+INSERT INTO SQLTest (ID, c1) VALUES (6, 'newtest1');
+INSERT INTO SQLTest (ID, c1) VALUES (7, 'newtest2');
+INSERT INTO SQLTest (ID, c1) VALUES (8, 'newtest3');
+INSERT INTO SQLTest (ID, c1) VALUES (9, 'newtest4');
+INSERT INTO SQLTest (ID, c1) VALUES (10, 'newtest5');
+GO
+
+-- Fazendo backup diferencial
+BACKUP DATABASE SQLTestDB
+TO @pname
+WITH DIFFERENTIAL;
+GO
+```
+*Todos os códigos podem ser encontrados na pasta SQL*
 ## Tipos de Falhas:
 
 1. **Falha de Transação**:
